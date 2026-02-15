@@ -1,5 +1,5 @@
 # lunaro
-a launcher for apps(only works on linux) that had logging root igpu(intergrated gpu) and dgpu(dedicated gpu) forcing.
+a launcher for apps(only works on linux) that has logging running programs as root running on igpu(intergrated gpu) and dgpu(dedicated gpu) forcing.
 
 use the command "help" for variables and commands
 config file, log file folder, appimage directory are located in /home/"user"/
