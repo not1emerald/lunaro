@@ -14,3 +14,5 @@ btw put all your appimages python scripts java files and sh files you want lunar
 notice: without java and python files that end in: .py and .jar wont work
 
 hope you enjoy! also maybe it has an easter egg maybe it doesnt. who knows? well me but still.
+
+ITS ON THE AUR!
