@@ -1,6 +1,6 @@
 #!/bin/sh
 
-VERSION="2.1.0"
+VERSION="2.2.0"
 
 CONFIG_DIR="$HOME/lunaroconf"
 CONFIG_FILE="$CONFIG_DIR/config"
