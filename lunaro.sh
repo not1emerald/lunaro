@@ -1,10 +1,6 @@
 #!/bin/sh
 
 VERSION="2.1.0"
-GITHUB_USER="not1emerald"
-GITHUB_REPO="lunaro"
-INSTALL_PATH="/usr/local/bin/lunaro"
-DOWNLOAD_URL="https://github.com/$GITHUB_USER/$GITHUB_REPO/releases/latest/download/lunaro.sh"
 
 CONFIG_DIR="$HOME/lunaroconf"
 CONFIG_FILE="$CONFIG_DIR/config"
@@ -14,44 +10,6 @@ APPIMAGE_DIR="$HOME/pwogams"
 LOG_DIR="$HOME/lunarologs"
 DEFAULT_GPU="dgpu"
 LUNARO_UI="ask"
-
-# ==================== SELF INSTALL ====================
-
-# If not already installed as a command, install itself
-if [ ! -f "$INSTALL_PATH" ] || ! command -v lunaro >/dev/null 2>&1; then
-    echo "Installing Lunaro..."
-    if install -m 755 "$0" "$INSTALL_PATH" 2>/dev/null; then
-        echo "Lunaro installed! You can now just type 'lunaro' from anywhere."
-        echo "────────────────────────────"
-    else
-        echo "Could not install to $INSTALL_PATH (try running with sudo)"
-        echo "You can still use Lunaro by running: bash $0"
-        echo "────────────────────────────"
-    fi
-fi
-
-# ==================== SELF UPDATE ====================
-
-self_update() {
-    echo "Downloading latest Lunaro..."
-    curl -L "$DOWNLOAD_URL" -o /tmp/lunaro_new.sh 2>/dev/null
-    if [ $? -ne 0 ]; then
-        echo "Update failed. Check your internet connection."
-        return
-    fi
-
-    cat > /tmp/lunaro_updater.sh << EOF
-#!/bin/sh
-sleep 1
-install -m 755 /tmp/lunaro_new.sh $INSTALL_PATH
-rm -f /tmp/lunaro_new.sh /tmp/lunaro_updater.sh
-echo "Lunaro updated to latest version."
-EOF
-    chmod +x /tmp/lunaro_updater.sh
-    nohup /tmp/lunaro_updater.sh > /dev/null 2>&1 &
-    echo "Update downloaded. Restart Lunaro to use the new version."
-    exit 0
-}
 
 mkdir -p "$CONFIG_DIR"
 mkdir -p "$APPIMAGE_DIR"
@@ -165,21 +123,6 @@ terminal_exec() {
         st)              st -e sh -c "$cmd" ;;
         *) sh -c "$cmd" ;;
     esac
-}
-
-# ==================== VERSION CHECK ====================
-
-check_for_updates() {
-    if ! command -v curl >/dev/null 2>&1; then
-        return
-    fi
-
-    latest=$(curl -sf "https://api.github.com/repos/$GITHUB_USER/$GITHUB_REPO/releases/latest" \
-        | grep '"tag_name"' \
-        | sed 's/.*"tag_name": *"v\{0,1\}\([^"]*\)".*/\1/')
-
-    [ -z "$latest" ] && return
-    [ "$latest" != "$VERSION" ] && UPDATE_AVAILABLE="$latest"
 }
 
 # ==================== ALIASES ====================
@@ -437,20 +380,15 @@ build_app_list() {
 gui_mode() {
     filter=""
 
-    if [ -n "$UPDATE_AVAILABLE" ]; then
-        yad $YAD_COMMON \
-            --title="$YAD_TITLE — Update Available" \
-            --image="software-update-available" \
-            --text="A new version of Lunaro is available!\n\nCurrent: <b>v$VERSION</b>\nLatest:  <b>v$UPDATE_AVAILABLE</b>\n\nRun <b>lunaro update</b> in CLI mode to update." \
-            --button="OK:0" \
-            --width=340
-    fi
-
     while true; do
         app_list=$(build_app_list "$filter")
 
         if [ -z "$app_list" ]; then
-            yad_error "No apps found$([ -n "$filter" ] && echo " matching: $filter" || echo " in $APPIMAGE_DIR")"
+            if [ -z "$filter" ]; then
+                yad_error "No apps found in $APPIMAGE_DIR"
+                return
+            fi
+            yad_error "No apps found matching: $filter"
             filter=""
             continue
         fi
@@ -564,7 +502,6 @@ COMMANDS:
   alias <n> <app>   Create a short name for an app
   unalias <n>       Remove an alias
   aliases           List all aliases
-  update            Update Lunaro to the latest version
   help              Show this help
   exit/quit         Exit Lunaro
 
@@ -621,12 +558,6 @@ cli_mode() {
     echo "Display : $([ "$USE_WAYLAND" -eq 1 ] && echo Wayland || echo X11)"
     echo "Terminal: ${TERMINAL:-none}"
     echo "────────────────────────────"
-
-    if [ -n "$UPDATE_AVAILABLE" ]; then
-        echo "⚠ Update available: v$UPDATE_AVAILABLE — type 'update' to install"
-        echo "────────────────────────────"
-    fi
-
     echo "Type 'help' or 'exit'"
 
     while true; do
@@ -640,7 +571,6 @@ cli_mode() {
             help) show_help; continue ;;
             list) list_apps; continue ;;
             aliases) list_aliases; continue ;;
-            update) self_update; continue ;;
             fav\ *) add_favorite "$(echo "$line" | sed 's/^fav //')"; continue ;;
             unfav\ *) remove_favorite "$(echo "$line" | sed 's/^unfav //')"; continue ;;
             alias\ *)
@@ -687,9 +617,6 @@ cli_mode() {
 }
 
 # ==================== STARTUP ====================
-
-UPDATE_AVAILABLE=""
-check_for_updates
 
 case "$LUNARO_UI" in
     gui)
